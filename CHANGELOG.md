@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_(no unreleased changes yet)_
+### Fixed
+
+- **The README's backup command had never been run, and there was no way back.** It documented how to copy the content volume out and not how to put it in. The README now carries the restore command too, and CI reads both out of the README and runs them as written on every push: a served file is backed up, deleted, restored and served again.
 
 ## [1.0.0] - 2026-09-23
 

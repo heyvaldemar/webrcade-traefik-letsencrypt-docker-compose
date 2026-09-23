@@ -117,6 +117,15 @@ docker run --rm -v webrcade_webrcade-data:/data -v "$PWD":/backup alpine \
   tar -czf /backup/webrcade-content.tar.gz -C /data .
 ```
 
+And to put it back, replacing what the volume holds now:
+
+```bash
+docker run --rm -v webrcade_webrcade-data:/data -v "$PWD":/backup alpine \
+  sh -c 'find /data -mindepth 1 -delete && tar -xzf /backup/webrcade-content.tar.gz -C /data'
+```
+
+CI runs both commands exactly as written here, on every push: a file is served, backed up, deleted, restored, and served again.
+
 Traefik's certificates live in the `traefik-certificates` volume and are re-issued automatically.
 
 ## Container hardening

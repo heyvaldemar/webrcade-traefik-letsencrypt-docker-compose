@@ -202,6 +202,32 @@ jobs:
           curl -skL "https://$APP_HOSTNAME/" | grep -q "<title>web" \
             || { echo "::error::the page through Traefik is not WebRcade's"; exit 1; }
 
+      - name: The backup and restore commands in the README, run as written
+        # The README is the only backup this stack has: two commands a person
+        # copies. They are read out of the README here rather than repeated, so
+        # the text a person copies and the text CI runs cannot drift apart.
+        run: |
+          python3 - <<'PY' > /tmp/blocks
+          import io, re
+          s = io.open("README.md", encoding="utf-8").read()
+          sec = s.split("## Backups", 1)[1].split("\n## ", 1)[0]
+          blocks = re.findall(r"```bash\n(.*?)```", sec, re.S)
+          assert len(blocks) == 2, "expected a backup and a restore block, found %d" % len(blocks)
+          io.open("/tmp/backup.sh", "w").write(blocks[0]); io.open("/tmp/restore.sh", "w").write(blocks[1])
+          PY
+          c="$(docker compose -f "$DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" ps -q webrcade)"
+          docker exec "$c" sh -c 'echo "kept by the backup" > /var/www/html/content/ci-backup-marker.txt'
+          url="https://$APP_HOSTNAME/content/ci-backup-marker.txt"
+          [ "$(curl -sk "$url")" = "kept by the backup" ] || { echo "::error::the marker is not served before the backup"; exit 1; }
+          work="$(mktemp -d)"; cd "$work"
+          bash /tmp/backup.sh
+          tar -tzf webrcade-content.tar.gz | grep -q ci-backup-marker.txt || { echo "::error::the README backup does not contain the marker"; exit 1; }
+          docker exec "$c" rm /var/www/html/content/ci-backup-marker.txt
+          [ "$(curl -sk -o /dev/null -w '%{http_code}' "$url")" = "404" ] || { echo "::error::the marker is still served after deleting it"; exit 1; }
+          bash /tmp/restore.sh
+          [ "$(curl -sk "$url")" = "kept by the backup" ] || { echo "::error::the README restore did not bring the marker back"; exit 1; }
+          echo "the README's backup and restore commands round-trip a served file"
+
       - name: Wait for the Traefik dashboard to be ready
         run: |
           # shellcheck disable=SC2016
