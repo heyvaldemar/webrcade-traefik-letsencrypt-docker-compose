@@ -73,6 +73,10 @@ services:
       - "traefik.http.middlewares.compresstraefik.compress=true"
       # Specify which Docker network Traefik should use for routing
       - "traefik.docker.network=traefik-network"
+    # After a host reboot or a crash, back up on its own. The template this was
+    # built from had no restart policy on its application service, so that
+    # service stayed down after every reboot while Traefik came back.
+    restart: unless-stopped
     depends_on:
       traefik:
         condition: service_healthy

@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registry and the WebRcade version with the newest Docker Hub tag.
 - **`./update.sh`** moves a deployment between release tags, refuses a major
   version unattended and names any newly required variable first.
+- **Both services restart on their own** after a reboot or a crash.
 - **A health check that asks for a page** (`curl` against the web server)
   instead of only testing that port 80 is open.
 - **Resource limits** and `no-new-privileges` on every service, Traefik with
