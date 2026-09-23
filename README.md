@@ -1,132 +1,140 @@
-# WebRCade with Let's Encrypt Using Docker Compose
+# WebRcade + Traefik + Let's Encrypt on Docker Compose
 
-[![Deployment Verification](https://github.com/heyvaldemar/webrcade-traefik-letsencrypt-docker-compose/actions/workflows/00-deployment-verification.yml/badge.svg)](https://github.com/heyvaldemar/webrcade-traefik-letsencrypt-docker-compose/actions)
+[![Deployment Verification](https://github.com/heyvaldemar/webrcade-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/webrcade-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml)
 
-The badge displayed on my repository indicates the status of the deployment verification workflow as executed on the latest commit to the main branch.
+This repository deploys [webЯcade](https://github.com/webrcade/webrcade), a feed-driven game frontend that runs entirely in the browser, behind Traefik with automatic Let's Encrypt TLS. The emulators run in the visitor's browser; the server only hands out the application and whatever feeds and files you give it.
 
-**Passing**: This means the most recent commit has successfully passed all deployment checks, confirming that the Docker Compose setup functions correctly as designed.
+## Getting started
 
-❗ Change variables in the `.env` to meet your requirements.
+```bash
+# 1. Clone
+git clone https://github.com/heyvaldemar/webrcade-traefik-letsencrypt-docker-compose
+cd webrcade-traefik-letsencrypt-docker-compose
 
-💡 Note that the `.env` file should be in the same directory as `webrcade-traefik-letsencrypt-docker-compose.yml`.
+# 2. Create the two Docker networks the stack expects
+docker network create traefik-network
+docker network create webrcade-network
 
-Create networks for your services before deploying the configuration using the commands:
+# 3. Copy the environment template and fill in required values
+cp .env.example .env
+$EDITOR .env
+# ^ Required: TRAEFIK_ACME_EMAIL, TRAEFIK_HOSTNAME, TRAEFIK_BASIC_AUTH,
+#   WEBRCADE_HOSTNAME. See .env.example for generation commands.
 
-`docker network create traefik-network`
+# 4. Deploy
+docker compose -f webrcade-traefik-letsencrypt-docker-compose.yml -p webrcade up -d
+```
 
-`docker network create webrcade-network`
+Within a minute or two, `https://${WEBRCADE_HOSTNAME}` serves WebRcade and `https://${TRAEFIK_HOSTNAME}` serves the basic-auth protected Traefik dashboard, both with fresh Let's Encrypt certificates.
 
-Deploy WebRCade using Docker Compose:
+### What success looks like
 
-`docker compose -f webrcade-traefik-letsencrypt-docker-compose.yml -p webrcade up -d`
+```bash
+docker compose -f webrcade-traefik-letsencrypt-docker-compose.yml -p webrcade ps
+# Expected: webrcade and traefik both show "(healthy)"
 
-## Author
+curl -fsS "https://${WEBRCADE_HOSTNAME}/" | grep -o "<title>[^<]*</title>"
+# Expected: <title>webЯcade</title>
+```
 
-hey everyone,
+### Common first-deploy issues
 
-💾 I’ve been in the IT game for over 20 years, cutting my teeth with some big names like [IBM](https://www.linkedin.com/in/heyvaldemar/), [Thales](https://www.linkedin.com/in/heyvaldemar/), and [Amazon](https://www.linkedin.com/in/heyvaldemar/). These days, I wear the hat of a DevOps Consultant and Team Lead, but what really gets me going is Docker and container technology - I’m kind of obsessed!
+- **Cert issuance fails.** DNS hasn't propagated to your server's IP yet, or port 80/443 isn't reachable from the internet. Confirm with `dig +short ${WEBRCADE_HOSTNAME}`.
+- **`docker compose up` fails with `set in .env`.** A required variable is empty in `.env`; the error names it.
+- **Network not found.** Step 2 (the `docker network create` commands) was skipped.
+- **The library is empty.** That is expected on a fresh deploy: nothing is in it until you add a feed. See below.
 
-💛 I have my own IT [blog](https://www.heyvaldemar.com/), where I’ve built a [community](https://discord.gg/AJQGCCBcqf) of DevOps enthusiasts who share my love for all things Docker, containers, and IT technologies in general. And to make sure everyone can jump on this awesome DevOps train, I write super detailed guides (seriously, they’re foolproof!) that help even newbies deploy and manage complex IT solutions.
+### Apply `.env` or compose-file changes
 
-🚀 My dream is to empower every single person in the DevOps community to squeeze every last drop of potential out of Docker and container tech.
+```bash
+docker compose -f webrcade-traefik-letsencrypt-docker-compose.yml -p webrcade up -d --force-recreate
+```
 
-🐳 As a [Docker Captain](https://www.docker.com/captains/vladimir-mikhalev/), I’m stoked to share my knowledge, experiences, and a good dose of passion for the tech. My aim is to encourage learning, innovation, and growth, and to inspire the next generation of IT whizz-kids to push Docker and container tech to its limits.
+## Your library
 
-Let’s do this together!
+WebRcade is driven by feeds: JSON files that list what to show and where each item's files are. A feed can point anywhere the browser can reach, or at files this server hosts. Anything you want served from here goes into the `webrcade-data` volume, which WebRcade publishes under `/content/`:
 
-## My 2D Portfolio
+```bash
+docker compose -f webrcade-traefik-letsencrypt-docker-compose.yml -p webrcade \
+  cp ./my-feed.json webrcade:/var/www/html/content/
+# then load https://${WEBRCADE_HOSTNAME}/content/my-feed.json as a feed in WebRcade
+```
 
-🕹️ Click into [sre.gg](https://www.sre.gg/) — my virtual space is a 2D pixel-art portfolio inviting you to interact with elements that encapsulate the milestones of my DevOps career.
+The upstream [feed format](https://docs.webrcade.com/) describes what a feed may contain.
 
-## My Courses
+## What this repository does not contain
 
-🎓 Dive into my [comprehensive IT courses](https://www.heyvaldemar.com/courses/) designed for enthusiasts and professionals alike. Whether you're looking to master Docker, conquer Kubernetes, or advance your DevOps skills, my courses provide a structured pathway to enhancing your technical prowess.
+No ROM, BIOS, firmware or other copyrighted game file is included, linked to, or described how to obtain. WebRcade plays a library you already own: use dumps of cartridges and discs you have, and check that doing so is lawful where you live. This repository deploys the upstream [webrcade/webrcade](https://github.com/webrcade/webrcade) image (Apache-2.0) unmodified; the image is not made or maintained here, so verify its contents and licensing for your own use.
 
-🔑 [Each course](https://www.udemy.com/user/heyvaldemar/) is built from the ground up with real-world scenarios in mind, ensuring that you gain practical knowledge and hands-on experience. From beginners to seasoned professionals, there's something here for everyone to elevate their IT skills.
+## Supply chain trust
 
-## My Services
+This repository is a deployment template, not a custom image. It orchestrates two upstream images:
 
-💼 Take a look at my [service catalog](https://www.heyvaldemar.com/services/) and find out how we can make your technological life better. Whether it's increasing the efficiency of your IT infrastructure, advancing your career, or expanding your technological horizons — I'm here to help you achieve your goals. From DevOps transformations to building gaming computers — let's make your technology unparalleled!
+- [`webrcade/webrcade`](https://hub.docker.com/r/webrcade/webrcade): WebRcade upstream
+- [`traefik`](https://hub.docker.com/_/traefik): reverse proxy, Docker Hub official image
 
-## Patreon Exclusives
+Both are pinned to `tag@sha256:<digest>` as interpolation defaults in the compose file's `x-images` block. Compose pulls by digest, not by tag, so two users deploying on different days get byte-identical image manifests. And `git pull` alone delivers the version combination this repository has tested. Setting `WEBRCADE_IMAGE_TAG` or `TRAEFIK_IMAGE_TAG` in `.env` overrides the default when you deliberately want a different version.
 
-🏆 Join my [Patreon](https://www.patreon.com/heyvaldemar) and dive deep into the world of Docker and DevOps with exclusive content tailored for IT enthusiasts and professionals. As your experienced guide, I offer a range of membership tiers designed to suit everyone from newbies to IT experts.
+Two override levels exist per image. `<PREFIX>_IMAGE_VERSION` in `.env` swaps only the version of that image (Compose then pulls the tag, without a digest) and leaves every other pin as tested; `<PREFIX>_IMAGE_TAG` replaces the whole reference, digest included. The variable names are listed in `.env.example`. Nested defaults need Docker Compose v2.5 or newer (2022).
 
-## My Recommendations
+The daily Pin Freshness workflow re-resolves each pinned tag against its registry and compares the pinned WebRcade version against the newest Docker Hub tag and the pinned Traefik version against the latest upstream release. Any drift fails that run and notifies the maintainer. GitHub Actions are pinned by commit SHA with version comments; Dependabot keeps those fresh.
 
-📕 Check out my collection of [essential DevOps books](https://kit.co/heyvaldemar/essential-devops-books)\
-🖥️ Check out my [studio streaming and recording kit](https://kit.co/heyvaldemar/my-studio-streaming-and-recording-kit)\
-📡 Check out my [streaming starter kit](https://kit.co/heyvaldemar/streaming-starter-kit)
+## Production checklist
 
-## Follow Me
+- [ ] **Generate your own `TRAEFIK_BASIC_AUTH` hash**: never deploy the example value from a guide.
+- [ ] **Verify Let's Encrypt cert issuance.** Watch `docker compose -p webrcade logs traefik -f` on first start for `Adding certificate for domain(s)`.
+- [ ] **Lock down the Traefik dashboard.** Basic auth is basic. Consider Traefik's `IPAllowList` middleware or not exposing the dashboard publicly at all.
+- [ ] **Decide who may reach it.** Anything in `/content/` is served to anyone who has the hostname. If your feeds point at files here, keep the site behind a VPN or an authenticating middleware rather than on the open internet.
 
-🎬 [YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1)\
-🐦 [X / Twitter](https://twitter.com/heyvaldemar)\
-🎨 [Instagram](https://www.instagram.com/heyvaldemar/)\
-🐘 [Mastodon](https://mastodon.social/@heyvaldemar)\
-🧵 [Threads](https://www.threads.net/@heyvaldemar)\
-🎸 [Facebook](https://www.facebook.com/heyvaldemarFB/)\
-🧊 [Bluesky](https://bsky.app/profile/heyvaldemar.bsky.social)\
-🎥 [TikTok](https://www.tiktok.com/@heyvaldemar)\
-💻 [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)\
-📣 [daily.dev Squad](https://app.daily.dev/squads/devopscompass)\
-🧩 [LeetCode](https://leetcode.com/u/heyvaldemar/)\
-🐈 [GitHub](https://github.com/heyvaldemar)
+## Unattended updates
 
-## Community of IT Experts
+Releases are the update channel: a tag is cut only after CI has booted the pinned images, upgraded from the previous release on the same volumes, and passed the smoke tests. `update.sh` moves a deployment to the newest tag and nothing else:
 
-👾 [Discord](https://discord.gg/AJQGCCBcqf)
+```bash
+./update.sh --dry-run   # show what would be applied
+./update.sh             # update within the current major and redeploy
+```
 
-## Refill My Coffee Supplies
+Put it on a timer for hands-off minor/patch updates:
 
-💖 [PayPal](https://www.paypal.com/paypalme/heyvaldemarCOM)\
-🏆 [Patreon](https://www.patreon.com/heyvaldemar)\
-💎 [GitHub](https://github.com/sponsors/heyvaldemar)\
-🥤 [BuyMeaCoffee](https://www.buymeacoffee.com/heyvaldemar)\
-🍪 [Ko-fi](https://ko-fi.com/heyvaldemar)
+```bash
+# crontab -e
+17 5 * * *  /opt/webrcade-traefik-letsencrypt-docker-compose/update.sh >> /var/log/webrcade-update.log 2>&1
+```
 
-🌟 **Bitcoin (BTC):** bc1q2fq0k2lvdythdrj4ep20metjwnjuf7wccpckxc\
-🔹 **Ethereum (ETH):** 0x76C936F9366Fad39769CA5285b0Af1d975adacB8\
-🪙 **Binance Coin (BNB):** bnb1xnn6gg63lr2dgufngfr0lkq39kz8qltjt2v2g6\
-💠 **Litecoin (LTC):** LMGrhx8Jsx73h1pWY9FE8GB46nBytjvz8g
+The script refuses to cross a MAJOR template version on its own: majors are breaking by definition and their release notes exist to be read. After reading them, `./update.sh --allow-major` performs the jump. It also refuses to touch a checkout with local modifications: your customization belongs in `.env`, which updates never overwrite.
 
-## Disclaimer
+## Resource limits
 
-This repository contains a Docker Compose configuration that references third-party Docker images. **I am not the creator or maintainer of these images** and have no control over their content. By using this configuration, you acknowledge that:
+Every service carries memory and CPU limits plus reservations as compose-level defaults: the same values CI boots the stack under. Override any of them in `.env` (the knobs and their defaults are listed in `.env.example`) and the override survives every `git pull`. If a service is OOM-killed under real load, `docker inspect <container> --format '{{.State.OOMKilled}}'` says so; raise its `_MEMORY_LIMIT` and recreate.
 
-1. **You are solely responsible** for verifying the contents, licensing, and legality of any third-party Docker images referenced in this repository.
-2. This configuration does **not include any ROM, BIOS, or other copyrighted files**. You are responsible for ensuring that any files you use comply with applicable licensing and copyright laws.
-3. **No liability** is assumed for any legal issues or damages that arise from the use or misuse of this configuration and the images it references.
+## Backups
 
-Please review all relevant licensing terms and only proceed if you have the legal right to use all components.
+The `webrcade-data` volume holds whatever you put in `/content/`. If those files exist only there, copy the volume out:
+
+```bash
+docker run --rm -v webrcade_webrcade-data:/data -v "$PWD":/backup alpine \
+  tar -czf /backup/webrcade-content.tar.gz -C /data .
+```
+
+Traefik's certificates live in the `traefik-certificates` volume and are re-issued automatically.
+
+## Container hardening
+
+Every service runs with `security_opt: no-new-privileges:true`, so a process cannot gain privileges through setuid binaries even if it escapes its initial capability set. The reverse proxy runs with `cap_drop: [ALL]` and adds back only `NET_BIND_SERVICE` to bind :80/:443. The application container keeps the default capability set on purpose: upstream images assume it, and a wrong guess there is a boot loop in production rather than a hardening win. CI boots the stack under exactly these settings on every push, so what ships is what was tested.
+
+## Testing
+
+The [Deployment Verification](https://github.com/heyvaldemar/webrcade-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml?query=branch%3Amain) workflow runs on every push, pull request, and every day at 06:00 UTC: shellcheck and actionlint, a Trivy scan of each pinned image, and a deploy-and-test job that first starts the previous release on the same volumes, then upgrades it, requests real routing through Traefik, and requires the page answering over HTTPS to be WebRcade's rather than merely a 200. Pin freshness is its own daily workflow, so this badge says whether the stack works, not whether a pin is one version behind.
+
+---
+
+## About the maintainer
 
 <div align="center">
 
-### Show some 💜 by starring some of the [repositories](https://github.com/heyValdemar?tab=repositories)!
+**Maintained by [Vladimir Mikhalev](https://github.com/heyvaldemar)** · Docker Captain · IBM Champion · AWS Community Builder
 
-![octocat](https://user-images.githubusercontent.com/10498744/210113490-e2fad07f-4488-4da8-a656-b9abbdd8cb26.gif)
+[YouTube](https://www.youtube.com/channel/UCf85kQ0u1sYTTTyKVpxrlyQ?sub_confirmation=1) · [Blog](https://heyvaldemar.com) · [LinkedIn](https://www.linkedin.com/in/heyvaldemar/)
 
 </div>
-
-![footer](https://user-images.githubusercontent.com/10498744/210157572-1fca0242-8af2-46a6-bfa3-666ffd40ebde.svg)
-
-## Security notes
-
-- **`.env` is tracked in this repository, and it carries live credentials.**
-  The credential is `TRAEFIK_BASIC_AUTH`. `.env.example` now lists every variable, and `.gitignore` excludes
-  `.env` — but adding it to `.gitignore` does not untrack a file that is
-  already tracked, and untracking it deletes it from any host that pulls. The
-  order matters:
-
-  ```bash
-  # 1. on the host that runs this stack, keep a copy
-  cp .env .env.keep
-  # 2. in a clone, stop tracking it and push
-  git rm --cached .env && git commit -m "chore: untrack .env" && git push
-  # 3. on the host, pull (which removes .env) and put it back
-  git pull && cp .env.keep .env && rm .env.keep
-  ```
-
-- **Rotate them afterwards.** The values are in the git history and cannot be
-  taken out of it, so untracking the file protects the next commit, not the
-  ones already made.
