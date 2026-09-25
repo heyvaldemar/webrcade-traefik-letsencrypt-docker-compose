@@ -1,6 +1,7 @@
 # WebRcade + Traefik + Let's Encrypt on Docker Compose
 
 [![Deployment Verification](https://github.com/heyvaldemar/webrcade-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml/badge.svg?branch=main)](https://github.com/heyvaldemar/webrcade-traefik-letsencrypt-docker-compose/actions/workflows/deployment-verification.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14841/badge)](https://www.bestpractices.dev/projects/14841)
 
 This repository deploys [webЯcade](https://github.com/webrcade/webrcade), a feed-driven game frontend that runs entirely in the browser, behind Traefik with automatic Let's Encrypt TLS. The emulators run in the visitor's browser; the server only hands out the application and whatever feeds and files you give it.
 
