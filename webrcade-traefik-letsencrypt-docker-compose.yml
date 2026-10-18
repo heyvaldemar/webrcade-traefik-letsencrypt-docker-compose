@@ -7,7 +7,7 @@
 # the pins from these lines — this block is the single source of truth.
 x-images:
   traefik: &traefik-image ${TRAEFIK_IMAGE_TAG:-traefik:${TRAEFIK_IMAGE_VERSION:-3.7@sha256:0f6150202bc1fed72a7bd2107460eaa510e5b8a905f3fdb5b84f2c8619c33368}}
-  webrcade: &webrcade-image ${WEBRCADE_IMAGE_TAG:-webrcade/webrcade:${WEBRCADE_IMAGE_VERSION:-0.2.3@sha256:fc83a945d8f530af6a7bbc60ba7dd13b7c72126412d43cbe055d773a969555d5}}
+  webrcade: &webrcade-image ${WEBRCADE_IMAGE_TAG:-webrcade/webrcade:${WEBRCADE_IMAGE_VERSION:-0.2.4@sha256:99950c7910bc0b886feae74d3962e6faf51a80da9ccb1d5cf487c50d8a630625}}
 
 networks:
   webrcade-network:
